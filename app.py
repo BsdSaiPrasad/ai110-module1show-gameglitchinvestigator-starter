@@ -1,68 +1,15 @@
 import random
 import streamlit as st
 
-def get_range_for_difficulty(difficulty: str):
-    if difficulty == "Easy":
-        return 1, 20
-    if difficulty == "Normal":
-        return 1, 100
-    if difficulty == "Hard":
-        return 1, 50
-    return 1, 100
-
-
-def parse_guess(raw: str):
-    if raw is None:
-        return False, None, "Enter a guess."
-
-    if raw == "":
-        return False, None, "Enter a guess."
-
-    try:
-        if "." in raw:
-            value = int(float(raw))
-        else:
-            value = int(raw)
-    except Exception:
-        return False, None, "That is not a number."
-
-    return True, value, None
-
-
-def check_guess(guess, secret):
-    if guess == secret:
-        return "Win", "🎉 Correct!"
-# Fix -1 
-    try:
-        if guess > secret:
-            return "Too High", "📉 Go LOWER!"
-        else:
-            return "Too Low", "📈 Go HIGHER!"
-    except TypeError:
-        g = str(guess)
-        if g == secret:
-            return "Win", "🎉 Correct!"
-        if g > secret:
-            return "Too High", "📉 Go LOWER!"
-        return "Too Low", "📈 Go HIGHER!"
-
-
-def update_score(current_score: int, outcome: str, attempt_number: int):
-    if outcome == "Win":
-        points = 100 - 10 * (attempt_number + 1)
-        if points < 10:
-            points = 10
-        return current_score + points
-
-    if outcome == "Too High":
-        if attempt_number % 2 == 0:
-            return current_score + 5
-        return current_score - 5
-
-    if outcome == "Too Low":
-        return current_score - 5
-
-    return current_score
+# FIX: Refactored all game logic functions out of app.py and into logic_utils.py.
+# app.py now imports them from there instead of defining them here.
+# This keeps UI code and game logic separated (suggested by AI, verified by running pytest).
+from logic_utils import (
+    get_range_for_difficulty,
+    parse_guess,
+    check_guess,
+    update_score,
+)
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -130,7 +77,9 @@ with col2:
     new_game = st.button("New Game 🔁")
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
-#fix-3
+# FIX: New Game button now fully resets status, history, and uses the correct difficulty range.
+# Previously it only reset attempts to 0 and always used range 1-100 regardless of difficulty.
+# AI suggested resetting session_state.status to "playing"; verified by testing each difficulty.
 if new_game:
     st.session_state.attempts = 1
     st.session_state.secret = random.randint(low, high)
@@ -155,7 +104,9 @@ if submit:
         st.error(err)
     else:
         st.session_state.history.append(guess_int)
-#fix-2
+        # FIX: Removed logic that converted the secret to a string on even attempts.
+        # That caused string vs integer comparisons which made correct guesses undetectable.
+        # AI identified this as the root cause; fix was to always use the integer secret directly.
         secret = st.session_state.secret
 
         outcome, message = check_guess(guess_int, secret)
